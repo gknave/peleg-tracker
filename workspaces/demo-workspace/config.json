@@ -1,0 +1,13 @@
+{
+    "top_left": [
+        0,
+        1000
+    ],
+    "bottom_right": [
+        2000,
+        3050
+    ],
+    "min_single_size": 400,
+    "max_single_size": 1300,
+    "frame_count": 13
+}
