@@ -5,7 +5,7 @@ import util.workspacecreator as workspacecreator
 
 def main():
     # parsing command line arguments
-    parser = argparse.ArgumentParser(description='tracking bees')
+    parser = argparse.ArgumentParser(description='initialize bee tracking workspace')
     parser.add_argument('video_path', metavar='video-path', type=str, 
                             help='the path to the mp4 file')
     parser.add_argument('workspace_name', metavar='workspace-name', type=str, 

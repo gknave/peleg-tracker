@@ -3,6 +3,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pickle
 import skimage.morphology as skmorph
 import skimage.segmentation as skseg
 import skimage.measure as skmeas
@@ -74,7 +75,6 @@ class VideoProcessor(object):
         print('done.')
     
     def write_frame_data(self, frame_data):
-        with open('../workspaces/{}/frame_data.txt'.format(self.workspace_name), mode='w') as write_file:
-            for ii in range(len(frame_data)):
-                write_file.write(str(frame_data[ii])+'\n')
-        write_file.close()
+        with open('../workspaces/{}/frame_data.pkl'.format(self.workspace_name), mode='wb') as fp:
+            pickle.dump(frame_data, fp)
+        fp.close()

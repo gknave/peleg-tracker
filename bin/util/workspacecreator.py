@@ -25,7 +25,7 @@ class WorkSpaceCreator(object):
         if not cap.isOpened():
             raise ValueError('unable to open video, please check file path')
         
-        ret, frame = cap.read()
+        _ret, frame = cap.read()
         
         satisifed_with_crop = False
         while not satisifed_with_crop:
@@ -66,7 +66,9 @@ class WorkSpaceCreator(object):
         regions = skmeas.regionprops(img, cache=False)
         regions.sort(key= lambda x : x.area)
         region_sizes = [region.area for region in regions if region.area < 10000]
+        f, ax = plt.subplots(figsize=(20,20))
         plt.hist(region_sizes, bins=100)
+        plt.savefig('../workspaces/{}/object_sizes.png'.format(self.workspace_name))
         plt.show()
 
         min_single_size = int(input('min single size: '))
