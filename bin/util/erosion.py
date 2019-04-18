@@ -1,0 +1,20 @@
+import numpy as np
+
+def findBoundary(image):
+    boundary = []
+    for row in range(image.shape[0]):
+        for col in range(image.shape[1]):
+            if image[row][col] == 1:
+                try:
+                    if image[row][col+1] == 0 or image[row][col-1] == 0 \
+                    or image[row+1][col] == 0 or image[row-1][col] == 0:
+                        boundary.append((row, col))
+                except IndexError:
+                    boundary.append((row,col))
+    return boundary, image.shape
+
+def createBoundaryMap(boundary, dims):
+    boundary_view = np.zeros(dims)
+    for boundary_val in boundary:
+        boundary_view[boundary_val[0]][boundary_val[1]] = 1
+    return boundary_view

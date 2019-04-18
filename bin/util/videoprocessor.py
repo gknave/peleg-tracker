@@ -1,4 +1,5 @@
 import cv2
+import util.erosion
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,7 +30,7 @@ class VideoProcessor(object):
         img = skmeas.label(img)
         return img
     
-    def region_extraction(self, image):
+    def single_region_extraction(self, image):
         regions = skmeas.regionprops(image, cache=False)
         lower_bound = self.config_params['min_single_size']
         upper_bound = self.config_params['max_single_size']
@@ -41,7 +42,37 @@ class VideoProcessor(object):
             if (region_size > lower_bound) and (region_size < upper_bound):
                 singles.append(region)
         return singles 
-        
+    
+    def double_region_extraction(self, image):
+        regions = skmeas.regionprops(image, cache=False)
+        lower_bound = self.config_params['max_single_size']
+        upper_bound = 2*self.config_params['max_single_size']
+        if not lower_bound or not upper_bound:
+            raise ValueError('please check your config file for this workspace for single size bounds')
+        doubles = []
+        for region in regions:
+            region_size = region.area
+            if (region_size > lower_bound) and (region_size < upper_bound):
+                doubles.append(region)
+        return doubles 
+    
+    def erode_doubles(self, doubles):
+        eroded_doubles = []
+        for double in doubles:
+            image = double.image.astype(float)
+            double_bbox = double.bbox
+            cont = True
+            while cont:
+                boundary, dims = util.erosion.findBoundary(image)
+                boundary_map = util.erosion.createBoundaryMap(boundary, dims)
+                image -= boundary_map
+                labeled_image = skmeas.label(image)
+                if max(labeled_image.flatten()) != 1:
+                    region_props = skmeas.regionprops(labeled_image)
+                    eroded_doubles.append((region_props, double_bbox))
+                    cont = False
+        return eroded_doubles
+    
     def process_video(self):
         cap = cv2.VideoCapture('../workspaces/{}/cropped_video.mp4'.format(self.workspace_name))
         if not cap.isOpened():
@@ -62,13 +93,31 @@ class VideoProcessor(object):
             img = self.extract_blobs(frame)
 
             # region extraction
-            singles = self.region_extraction(img)
+            singles = self.single_region_extraction(img)
             single_data = []
             for single in singles:
                 centroid = tuple([int(np.round(single.centroid[i])) for i in range(2)])
                 single_data.append(tuple((centroid, single.bbox)))
             
-            frame_data.append(single_data)
+            # region extraction doubles with erosion
+            doubles = self.double_region_extraction(img)
+            doubles_eroded = self.erode_doubles(doubles)
+            double_data = []
+            for double_set in doubles_eroded:
+                double_regions = double_set[0]
+                double_bbox = double_set[1]
+                for double in double_regions:
+                    centroid = tuple([int(np.round(double.centroid[i]+double_bbox[i])) for i in range(2)])
+                    new_bbox = list(double.bbox)
+                    new_bbox[0] += double_bbox[0]
+                    new_bbox[1] += double_bbox[1]
+                    new_bbox[2] += double_bbox[0]
+                    new_bbox[3] += double_bbox[1]
+                    double_data.append(tuple((centroid, tuple(new_bbox))))
+                # print(centroid)
+
+
+            frame_data.append(single_data+double_data)
         print('')
         print('writing frame data ...', end='')
         self.write_frame_data(frame_data)
