@@ -34,8 +34,28 @@ peleg-tracker
 └─── workspaces 
 │   │   __init__.py
 │   
+└─── data 
+│   │   dense_short.mp4
+|
 └─── bin
     │   ...
 ```
 
-Now lets create our first tracking instance 
+Now lets create our first tracking instance. There is a demo video called "dense_short.mp4" in the data directory that we will use to demonstrate tracking. The workflow is divided into 3 parts. 
+
+#### 1. initializing workspace.
+
+first we want to create our workspace and set the configuration for the tracking tool to use. we can do by running the following command from the peleg-tracker/bin directory (it is very important that it is run from this directory!).
+
+```
+python initialize_workspace.py {path to file} {workspace name}
+```
+
+For this demo that command will look like.
+
+```
+python initialize_workspace.py ../data/dense_short.mp4 demo-workspace
+```
+
+this will run
+ 
