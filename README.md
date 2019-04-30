@@ -27,13 +27,15 @@ if this runs with no errors you are ready to go!
 this object you will be interacting with is a workspace. each workspace must have a unique name and a number of files will be automatically generated. this is to help keep different configurations and tracking instances seperate. when this repository is first cloned their will be a directory named workspaces with a single file in it
 
 ```
-project
+peleg-tracker
 │   README.md
-│       
+│   LICENSE
+|   .gitignore
 └─── workspaces 
 │   │   __init__.py
-│   │   file012.txt
 │   
 └─── bin
     │   ...
 ```
+
+Now lets create our first tracking instance 
