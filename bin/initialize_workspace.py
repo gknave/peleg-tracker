@@ -1,5 +1,6 @@
 import argparse
 import cv2
+import matplotlib.pyplot as plt
 import sys
 import util.workspacecreator as workspacecreator
 
@@ -16,12 +17,7 @@ def main():
     workspace_name = args.workspace_name
 
     workspace_creator = workspacecreator.WorkSpaceCreator(video_path, workspace_name)
-    workspace_creator.create_directory()
-    workspace_creator.get_crop_points()
-    workspace_creator.crop_video()
-    workspace_creator.get_singles_sizes()
-    workspace_creator.count_frames()
-    workspace_creator.write_config_file()
+    workspace_creator.create_workspace()
 
 if __name__ == "__main__":
     main()

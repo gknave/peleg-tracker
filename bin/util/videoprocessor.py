@@ -20,60 +20,77 @@ class VideoProcessor(object):
             self.config_params = json.load(fp)
         fp.close()
 
+    def erode_n_clusters(self, clusters):
+        ''' estimates number of bees using mean bee size and erodes cluster until that many
+        blobs are present. stops eroding once a blob is detached. 
+        documentation for regionprops here (https://scikit-image.org/docs/dev/api/skimage.measure.html#skimage.measure.regionprops)
+
+        Returns:
+            list of regionprops objects
+        
+        '''
+        eroded_clusters = []
+        mean_size = 0.5*(self.config_params['max_single_size'] + self.config_params['min_single_size'])
+        for cluster in clusters:
+            if cluster.area < self.config_params['max_single_size']:
+                continue
+            # to avoid catching massive clusters b/c erosion doesn't work on these
+            if cluster.area > 20000:
+                continue
+            number_bees = round(cluster.area/mean_size)
+            if number_bees < 2: 
+                continue
+            image = cluster.image.astype(float)
+            cluster_bbox = cluster.bbox
+            cont = True
+            count = 0
+            while cont:
+                boundary, dims = util.erosion.findBoundary(image)
+                boundary_map = util.erosion.createBoundaryMap(boundary, dims).astype('float')
+                # erosion happens here
+                image -= boundary_map
+
+                labeled_image = skmeas.label(image)
+                
+                # no blobs remaining
+                if sum(labeled_image.flatten()) == 0:
+                    cont = False
+                
+                # removing the smallest blob from the erosion
+                if max(labeled_image.flatten()) != 1:
+                    region_props = skmeas.regionprops(labeled_image)
+                    region_props.sort(key= lambda x : x.area)
+                    # all but smallest
+                    for region in region_props[:-1]:
+                        eroded_clusters.append((region, cluster_bbox))
+                        # this slicing gets complicated. gotta trust a bit here
+                        image[region.bbox[0]:region.bbox[2], region.bbox[1]:region.bbox[3]] =\
+                             np.zeros((region.bbox[2]-region.bbox[0], region.bbox[3]-region.bbox[1]))
+                        count += 1
+                        if (count == number_bees-1):
+                            cont = False
+                            eroded_clusters.append((region_props[-1], cluster_bbox))
+                            break
+        return eroded_clusters
+
     @staticmethod
     def extract_blobs(frame):
+        ''' extracts blobs from a frame. this is static because it is used in 
+        initialization of workspace to get histogram. this is @Gary's preprocessing code.
+
+        Returns:
+            labelled image where each island has a different integer value.
+        '''
         img = np.asarray(frame, dtype=float)[:,:,0]*(1/255)
         img = abs(1-img)
         img = img > skfilt.threshold_otsu(img)
         img = skmorph.opening(img, skmorph.square(8))
         img = skseg.clear_border(skmorph.remove_small_objects(img))
-        img = skmeas.label(img)
-        return img
-    
-    def single_region_extraction(self, image):
-        regions = skmeas.regionprops(image, cache=False)
-        lower_bound = self.config_params['min_single_size']
-        upper_bound = self.config_params['max_single_size']
-        if not lower_bound or not upper_bound:
-            raise ValueError('please check your config file for this workspace for single size bounds')
-        singles = []
-        for region in regions:
-            region_size = region.area
-            if (region_size > lower_bound) and (region_size < upper_bound):
-                singles.append(region)
-        return singles 
-    
-    def double_region_extraction(self, image):
-        regions = skmeas.regionprops(image, cache=False)
-        lower_bound = self.config_params['max_single_size']
-        upper_bound = 2*self.config_params['max_single_size']
-        if not lower_bound or not upper_bound:
-            raise ValueError('please check your config file for this workspace for single size bounds')
-        doubles = []
-        for region in regions:
-            region_size = region.area
-            if (region_size > lower_bound) and (region_size < upper_bound):
-                doubles.append(region)
-        return doubles 
-    
-    def erode_doubles(self, doubles):
-        eroded_doubles = []
-        for double in doubles:
-            image = double.image.astype(float)
-            double_bbox = double.bbox
-            cont = True
-            while cont:
-                boundary, dims = util.erosion.findBoundary(image)
-                boundary_map = util.erosion.createBoundaryMap(boundary, dims)
-                image -= boundary_map
-                labeled_image = skmeas.label(image)
-                if max(labeled_image.flatten()) != 1:
-                    region_props = skmeas.regionprops(labeled_image)
-                    eroded_doubles.append((region_props, double_bbox))
-                    cont = False
-        return eroded_doubles
-    
+        return skmeas.label(img)
+
     def process_video(self):
+        ''' for each frame finds blobs and erodes blobs. each frame data written to file.
+        '''
         cap = cv2.VideoCapture('../workspaces/{}/cropped_video.mp4'.format(self.workspace_name))
         if not cap.isOpened():
             raise ValueError('unable to open video, check workspace name')
@@ -92,38 +109,55 @@ class VideoProcessor(object):
             # preprocessing
             img = self.extract_blobs(frame)
 
-            # region extraction
+            # region extraction -- single bees
             singles = self.single_region_extraction(img)
             single_data = []
             for single in singles:
                 centroid = tuple([int(np.round(single.centroid[i])) for i in range(2)])
                 single_data.append(tuple((centroid, single.bbox)))
             
-            # region extraction doubles with erosion
-            doubles = self.double_region_extraction(img)
-            doubles_eroded = self.erode_doubles(doubles)
-            double_data = []
-            for double_set in doubles_eroded:
-                double_regions = double_set[0]
-                double_bbox = double_set[1]
-                for double in double_regions:
-                    centroid = tuple([int(np.round(double.centroid[i]+double_bbox[i])) for i in range(2)])
-                    new_bbox = list(double.bbox)
-                    new_bbox[0] += double_bbox[0]
-                    new_bbox[1] += double_bbox[1]
-                    new_bbox[2] += double_bbox[0]
-                    new_bbox[3] += double_bbox[1]
-                    double_data.append(tuple((centroid, tuple(new_bbox))))
-                # print(centroid)
-
-
-            frame_data.append(single_data+double_data)
+            # region extraction -- more than 1 bee
+            regions = skmeas.regionprops(img, cache=False)
+            clusters_eroded = self.erode_n_clusters(regions)
+            cluster_data = []
+            for cluster_set in clusters_eroded:
+                cluster_region = cluster_set[0]
+                cluster_bbox = cluster_set[1]
+                centroid = tuple([int(np.round(cluster_region.centroid[i]+cluster_bbox[i])) for i in range(2)])
+                new_bbox = list(cluster_region.bbox)
+                new_bbox[0] += cluster_bbox[0]
+                new_bbox[1] += cluster_bbox[1]
+                new_bbox[2] += cluster_bbox[0]
+                new_bbox[3] += cluster_bbox[1]
+                cluster_data.append(tuple((centroid, tuple(new_bbox))))
+            frame_data.append(single_data+cluster_data)
         print('')
         print('writing frame data ...', end='')
         self.write_frame_data(frame_data)
         print('done.')
     
+    def single_region_extraction(self, image):
+        ''' extracts all the single regions based on max and min sizes specified in config params.
+        documentation for regionprops here (https://scikit-image.org/docs/dev/api/skimage.measure.html#skimage.measure.regionprops)
+
+        Returns:
+            list of regionprops objects
+        '''
+        regions = skmeas.regionprops(image, cache=False)
+        lower_bound = self.config_params['min_single_size']
+        upper_bound = self.config_params['max_single_size']
+        if not lower_bound or not upper_bound:
+            raise ValueError('please check your config file for this workspace for single size bounds')
+        singles = []
+        for region in regions:
+            region_size = region.area
+            if (region_size > lower_bound) and (region_size < upper_bound):
+                singles.append(region)
+        return singles 
+    
     def write_frame_data(self, frame_data):
+        ''' writes data to pkl file. 
+        '''
         with open('../workspaces/{}/frame_data.pkl'.format(self.workspace_name), mode='wb') as fp:
             pickle.dump(frame_data, fp)
         fp.close()

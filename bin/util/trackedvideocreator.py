@@ -16,6 +16,8 @@ class TrackedVideoCreator(object):
         fp.close()
 
     def create_video(self):
+        ''' loads location data and for each frame plots location. saves each individual frame.
+        '''
         location_data = self.load_location_data()
         video_path = '../workspaces/{}/cropped_video.mp4'.format(self.workspace_name)
         cap = cv2.VideoCapture(video_path)
@@ -31,12 +33,17 @@ class TrackedVideoCreator(object):
         self.write_video()
 
     def load_location_data(self):
+        ''' loads location data from pkl file
+        '''
         with open('../workspaces/{}/frame_data.pkl'.format(self.workspace_name), mode='rb') as fp:
             data = pickle.load(fp)
         fp.close()
         return data
     
     def plot_locations(self, frame, location_data, frame_id):
+        ''' plots the bounding boxes and centers on each bee. lots of indexing here. 
+        gotta trust a bit. took a while to work out...
+        '''
         rectangles = []
         circles = []
         for loc in location_data:
@@ -59,6 +66,8 @@ class TrackedVideoCreator(object):
         plt.savefig(os.path.join(save_path, 'frame{:04d}.png'.format(frame_id)))
 
     def write_video(self):
+        ''' calls fffmpeg to turn the set of frames into a video. 
+        '''
         subprocess.call(['ffmpeg',
                          '-y',
                          '-i',
