@@ -31,6 +31,7 @@ peleg-tracker
 │   README.md
 │   LICENSE
 |   .gitignore
+| 
 └─── workspaces 
 │   │   __init__.py
 │   
@@ -57,5 +58,59 @@ For this demo that command will look like.
 python initialize_workspace.py ../data/dense_short.mp4 demo-workspace
 ```
 
-this will run
+this will run with a lot of output and then the following window should open on your screen.
+
+![unmarked_frame](img/demo_frame.png)
  
+ now we want to choose the region of interest that we want the tracking algorithms to look at. to do this simply click and drag a box over the region. the following image shows an example region.
+ 
+ ![unmarked_frame_roi](img/demo_frame_marked.png)
+ 
+ now simply press enter when you are satisfied (you can always redraw the box if the first one wasn't ideal). next a histogram will appear on your screen. it should look like this. 
+ 
+ ![histogram](img/demo_hist.png)
+ 
+ this is showing the distribution of sizes of blobs that it detects in a single frame. we want to specify approximate range of sizes for the sinlge bees, which should look like a large spike in the histogram. we choose an lower and upper bound that approximately capture the large spike, say for example 400-1300. close the histogram and enter the lower and upper bounds in the command line. it should look something like this.
+ 
+ ![histogram](img/demo_input.png)
+ 
+ once this is entered we are done! now if we look in our workspaces directory we can see that some files have been created. it should look like this. 
+ 
+ ```
+peleg-tracker
+│   README.md
+│   LICENSE
+|   .gitignore
+| 
+└─── workspaces 
+│   │   __init__.py
+|   |
+|   └─── demo-workspace
+|        |    config.json
+|        |    cropped_video.mp4
+|        |    object_sizes.png
+│   
+└─── data 
+│   │   dense_short.mp4
+|
+└─── bin
+    │   ...
+```
+
+the config.json file simply keeps track of all the data we just input to initialize the workspace. this will be used by the tracking tool. the cropped_video.mp4 file is the same video we gave as input initially, but cropped to the dimensions we specified. the object_sizes.png image is the histogram of sizes. this will be helpful if we want to adjust the size of single bees in the config file. 
+
+#### 2. tracking tool.
+
+now that the workspace is created, most of our work is done. to run the processing we first need to extract the bee locations from each frame. that is what this step does. again from the bin directory (and only the bin directory!) run the following.
+
+```
+python tracking_tool.py {workspace name}
+```
+
+so in the case of this demo that is, 
+
+```
+python tracking_tool.py demo-workspace
+```
+
+this will start off the processing of the video. it usually takes a couple seconds per frame, so if it is a super long video this could be awhile. it has some progress information along the bottom and should look something like this.
