@@ -114,3 +114,83 @@ python tracking_tool.py demo-workspace
 ```
 
 this will start off the processing of the video. it usually takes a couple seconds per frame, so if it is a super long video this could be awhile. it has some progress information along the bottom and should look something like this.
+
+![progess](img/progress.png)
+
+the frame counter is usually a couple off but it should at least help get an idea of how long it will take to run. now if we look in our workspaces directory we see more files were added. it should look like this.
+
+ ```
+peleg-tracker
+│   README.md
+│   LICENSE
+|   .gitignore
+| 
+└─── workspaces 
+│   │   __init__.py
+|   |
+|   └─── demo-workspace
+|        |    config.json
+|        |    cropped_video.mp4
+|        |    object_sizes.png
+│        |
+|        └─── frame_data
+|             |    frame0.pkl
+|             |    frame1.pkl
+|             |    ...
+│   
+└─── data 
+│   │   dense_short.mp4
+|
+└─── bin
+    │   ...
+```
+
+#### 3. create tracked video.
+
+now that we have all the data we need we can finally create our marked video. this command handes the creation of the marked video and frames.
+
+```
+python create_tracked_video.py {workspace name}
+```
+
+so in the case of this demo that is, 
+
+```
+python create_tracked_video.py demo-workspace
+```
+
+this will again bring up the same progress data. this is usually about a second per frame so again may be a long wait if you are working with a long video. now the file structure should look as follows.
+
+ ```
+peleg-tracker
+│   README.md
+│   LICENSE
+|   .gitignore
+| 
+└─── workspaces 
+│   │   __init__.py
+|   |
+|   └─── demo-workspace
+|        |    config.json
+|        |    cropped_video.mp4
+|        |    object_sizes.png
+|        |    marked_video.mp4
+│        |
+|        └─── frame_data
+|             |    frame0.pkl
+|             |    frame1.pkl
+|             |    ...
+│
+|        └─── frame_data
+|             |    frame0000.png
+|             |    frame0001.png
+|             |    ...
+│   
+└─── data 
+│   │   dense_short.mp4
+|
+└─── bin
+    │   ...
+```
+
+the "marked_video.mp4" file that appears is the output that we built. a video with all detected bees boxed and marked. the video should look something like this.
