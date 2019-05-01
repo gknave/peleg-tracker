@@ -95,16 +95,16 @@ class VideoProcessor(object):
         if not cap.isOpened():
             raise ValueError('unable to open video, check workspace name')
         
-        frame_data = []
-        frame_count = 1
+        os.makedirs('../workspaces/{}/frame_data'.format(self.workspace_name))
+        frame_count = 0
         while(cap.isOpened()):
+            frame_data = []
             ret, frame = cap.read()
             if not ret:
                 break
             print('processing frame {:04d} of {:04d} : {:2.2f}%'.format(
                 frame_count, self.config_params['frame_count'], 100*frame_count/self.config_params['frame_count'])
                 , end='\r')
-            frame_count += 1
 
             # preprocessing
             img = self.extract_blobs(frame)
@@ -131,9 +131,11 @@ class VideoProcessor(object):
                 new_bbox[3] += cluster_bbox[1]
                 cluster_data.append(tuple((centroid, tuple(new_bbox))))
             frame_data.append(single_data+cluster_data)
+            self.write_frame_data(frame_data, frame_count)
+            frame_count += 1
         print('')
         print('writing frame data ...', end='')
-        self.write_frame_data(frame_data)
+        
         print('done.')
     
     def single_region_extraction(self, image):
@@ -155,9 +157,9 @@ class VideoProcessor(object):
                 singles.append(region)
         return singles 
     
-    def write_frame_data(self, frame_data):
+    def write_frame_data(self, frame_data, frame_count):
         ''' writes data to pkl file. 
         '''
-        with open('../workspaces/{}/frame_data.pkl'.format(self.workspace_name), mode='wb') as fp:
+        with open('../workspaces/{}/frame_data/frame{}.pkl'.format(self.workspace_name, frame_count), mode='wb') as fp:
             pickle.dump(frame_data, fp)
         fp.close()

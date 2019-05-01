@@ -2,6 +2,7 @@ import cv2
 import json
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
+import numpy as np
 import os 
 import skimage.measure as skmeas
 import subprocess
@@ -88,7 +89,9 @@ class WorkSpaceCreator(object):
         regions.sort(key= lambda x : x.area)
         region_sizes = [region.area for region in regions if region.area < 10000]
         f, ax = plt.subplots(figsize=(20,20))
+        ax.tick_params(axis='x', rotation=90)
         plt.hist(region_sizes, bins=100)
+        plt.xticks(np.arange(0,region_sizes[-1], 150))
         plt.savefig('../workspaces/{}/object_sizes.png'.format(self.workspace_name))
         plt.show()
 
