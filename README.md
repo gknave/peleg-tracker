@@ -194,3 +194,12 @@ peleg-tracker
 ```
 
 the "marked_video.mp4" file that appears is the output that we built. a video with all detected bees boxed and marked. the video should look something like this.
+
+![marked](img/marked.png)
+
+## 
+
+alright! thats it. you can edit the configuration file at any time if you want to tweak bee sizes or whatever. once a workspace is built it should be pretty self contained and useful for trying different experiments and configurations.
+
+happy tracking!
+mike
